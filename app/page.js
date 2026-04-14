@@ -24,6 +24,7 @@ export default function Home() {
   const [grade, setGrade] = useState(null);
   const [stage, setStage] = useState(1);
   const [claudeKey, setClaudeKey] = useState('');
+  const [claudeMode, setClaudeMode] = useState('claude');
   const [elevenKey, setElevenKey] = useState('');
   const [voiceName, setVoiceName] = useState('Rachel');
   const [voiceMode, setVoiceMode] = useState('elevenlabs');
@@ -70,14 +71,26 @@ export default function Home() {
   async function callClaude(history) {
     setLoading(true);
     try {
-      const res = await fetch('/api/claude', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-claude-key': claudeKey },
-        body: JSON.stringify({ messages: history, system: buildSystemPrompt() })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(JSON.stringify(data.error));
-      const text = data.content[0].text;
+      let text;
+      if (claudeMode === 'gpt') {
+        const res = await fetch('/api/gpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-gpt-key': claudeKey },
+          body: JSON.stringify({ messages: history, system: buildSystemPrompt() })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(JSON.stringify(data.error));
+        text = data.choices[0].message.content;
+      } else {
+        const res = await fetch('/api/claude', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-claude-key': claudeKey },
+          body: JSON.stringify({ messages: history, system: buildSystemPrompt() })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(JSON.stringify(data.error));
+        text = data.content[0].text;
+      }
       const newMsg = { role: 'assistant', content: text };
       setMessages(prev => [...prev, newMsg]);
       if (text.includes('성공!')) setShowSuccess(true);
@@ -389,11 +402,11 @@ export default function Home() {
               <div className="abox">
                 <div className="lbl" style={{marginBottom:8}}>대화 AI 선택</div>
                 <div className="arow">
-                  <button className="abtn sel">Claude (Anthropic)</button>
-                  <button className="abtn" style={{opacity:.4}}>GPT (준비 중)</button>
+                  <button className={`abtn${claudeMode==='claude'?' sel':''}`} onClick={()=>setClaudeMode('claude')}>Claude (Anthropic)</button>
+                  <button className={`abtn${claudeMode==='gpt'?' sel':''}`} onClick={()=>setClaudeMode('gpt')}>GPT (OpenAI)</button>
                 </div>
-                <div className="lbl" style={{marginBottom:8}}>Claude API 키</div>
-                <input className="ainp" type="password" placeholder="sk-ant-api03-..." value={claudeKey} onChange={e=>setClaudeKey(e.target.value)}/>
+                <div className="lbl" style={{marginBottom:8}}>{claudeMode==='claude'?'Claude API 키':'GPT API 키'}</div>
+                <input className="ainp" type="password" placeholder={claudeMode==='claude'?'sk-ant-api03-...':'sk-proj-...'} value={claudeKey} onChange={e=>setClaudeKey(e.target.value)}/>
                 <div className="lbl" style={{marginBottom:8}}>음성 출력</div>
                 <div className="arow" style={{marginBottom:10}}>
                   <button className={`abtn${voiceMode==='browser'?' sel':''}`} onClick={()=>setVoiceMode('browser')}>브라우저 기본 (무료)</button>

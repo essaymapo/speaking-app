@@ -113,7 +113,30 @@ export default function Home() {
       .replace(/[🎉✅❌⚠️👍👎😊😄🙂]/g, '')
       .trim();
     if (!clean) return;
-    fallbackSpeak(clean);
+
+    if (voiceMode === 'elevenlabs' && elevenKey) {
+      try {
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-eleven-key': elevenKey },
+          body: JSON.stringify({ text: clean, voiceId: voiceIds[voiceName] })
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(JSON.stringify(err));
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        audioRef.current = new Audio(url);
+        audioRef.current.play();
+      } catch (e) {
+        setMessages(prev => [...prev, { role: 'assistant', content: '음성 오류: ' + e.message, type: 'sys' }]);
+        fallbackSpeak(clean);
+      }
+    } else {
+      fallbackSpeak(clean);
+    }
   }
 
   function fallbackSpeak(text) {

@@ -1,6 +1,18 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 
+function FbItem({ label, score, reason, fallback }) {
+  const cls = score==='미흡'?'fb-red':score==='준수'?'fb-blue':'fb-yellow';
+  const text = score || '분석 중';
+  return (
+    <div className="fbi">
+      <span className={`fb-badge ${score?cls:'fb-yellow'}`}>{text}</span>
+      <div className="fbil">{label}</div>
+      <div className="fbiv">{reason || fallback}</div>
+    </div>
+  );
+}
+
 const stageData = {
   1:{grade:'2학년',gradeGroup:'초등학교 1~2학년군',diff:'입문',std:'[2국01-04] 자신의 경험이나 생각을 바른 자세로 발표한다',cond:'경험이나 생각이 담긴 말이 나오면 OK',k1:'자신의 경험이나 생각이 주장에 담겼는지 확인하세요.',k2:'이유가 짧더라도 경험과 연결되어 있으면 충분합니다.',p1:'바른 자세와 적절한 목소리로 말했는지 살펴보세요.',p2:'말차례를 지키며 대화에 참여하는 기초 능력을 기르고 있습니다.',a1:'듣기·말하기에 흥미를 가지고 적극적으로 참여하는 태도가 중요합니다.',now:'현재 1단계 수준입니다. 경험과 생각을 담아 말하는 연습을 시작했습니다.'},
   2:{grade:'3학년',gradeGroup:'초등학교 3~4학년군',diff:'기초',std:'[4국01-05] 목적과 주제에 알맞게 자료를 정리하여 자신감 있게 발표한다',cond:'주제에 맞는 이유가 구체적으로 나오면 OK',k1:'주장이 주제와 목적에 알맞게 구성되어 있는지 확인하세요.',k2:'이유가 주장을 뒷받침하는지, 구체적으로 제시되었는지 점검하세요.',p1:'준언어·비언어적 표현(억양, 속도, 표정)을 적절히 활용했는지 살펴보세요.',p2:'발표 내용을 점검하고 조정하는 과정에서 성장하고 있습니다.',a1:'자신감 있게 발표하려는 태도와 의지가 느껴집니다.',now:'현재 2단계 수준입니다. 목적과 주제에 맞게 이유를 구성하는 연습 중입니다.'},
@@ -43,6 +55,8 @@ export default function Home() {
   const [celebrate, setCelebrate] = useState(false);
   const [paused, setPaused] = useState(false);
   const [interimText, setInterimText] = useState('');
+  const [fbScores, setFbScores] = useState(null);
+  const [fbLoading, setFbLoading] = useState(false);
 
   const chatRef = useRef(null);
   const recRef = useRef(null);
@@ -309,7 +323,53 @@ export default function Home() {
     await callAI(initHistory);
   }
 
-  function togglePause() {
+  async function analyzeFeedback() {
+    if (messagesRef.current.length < 2) return;
+    setFbLoading(true);
+    try {
+      const s = stageData[stageRef.current];
+      const conv = messagesRef.current
+        .filter(m=>m.role==='user'||m.role==='assistant')
+        .slice(1)
+        .map(m=>`${m.role==='user'?'아이':'AI'}: ${m.content}`)
+        .join('\n');
+
+      const prompt = `다음은 초등학생 말하기 수업 대화야. 아이의 말하기를 분석해서 각 항목을 미흡/보통/준수 중 하나로 평가해줘.
+
+수업유형: ${lessonType} / 학년: ${s.grade} / 성취기준: ${s.std}
+
+대화 내용:
+${conv}
+
+반드시 아래 JSON 형식으로만 답해. 다른 말 금지.
+{"k1":"미흡/보통/준수","k2":"미흡/보통/준수","p1":"미흡/보통/준수","p2":"미흡/보통/준수","a1":"미흡/보통/준수","reason_k1":"한줄이유","reason_k2":"한줄이유","reason_p1":"한줄이유","reason_p2":"한줄이유","reason_a1":"한줄이유"}
+
+평가 기준:
+- k1(주장 명확성): 주장이 한 문장으로 명확하게 나왔는가
+- k2(이유 적절성): 이유가 주장을 뒷받침하는가
+- p1(상대 고려): 상대 입장을 고려한 표현이 있는가
+- p2(대화 조정): 대화 흐름에 따라 말을 수정/보완했는가
+- a1(참여 태도): 적극적으로 참여했는가`;
+
+      const endpoint = claudeMode==='gpt'?'/api/gpt':'/api/claude';
+      const text = await callAPIRaw(endpoint, claudeKey, {
+        messages:[{role:'user', content:prompt}],
+        system:'너는 국어 교육 전문가야. JSON만 출력해.'
+      });
+      const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+      setFbScores(parsed);
+    } catch(e) {
+      setFbScores(null);
+    } finally {
+      setFbLoading(false);
+    }
+  }
+
+  function toggleFb() {
+    const next = !showFb;
+    setShowFb(next);
+    if (next) analyzeFeedback();
+  }
     if (!paused) {
       setPaused(true);
       pausedRef.current = true;
@@ -647,7 +707,7 @@ export default function Home() {
               </div>
             </div>
             <div className="cbtns">
-              <button className="cbtn fb" onClick={()=>setShowFb(f=>!f)}>피드백</button>
+              <button className="cbtn fb" onClick={toggleFb}>피드백</button>
               <button className="cbtn pa" onClick={togglePause}>{paused?'재개':'일시정지'}</button>
               <button className="cbtn st" onClick={endChat}>중지</button>
             </div>
@@ -708,20 +768,32 @@ export default function Home() {
                 <div className="fbmi"><div className="fbml">영역</div><div className="fbmv">듣기·말하기</div></div>
                 <div className="fbmi fbmif"><div className="fbml">관련 성취기준</div><div className="fbmv">{sd.std}</div></div>
               </div>
-              <div className="fbsec">
-                <div className="fbsh">지식·이해 범주</div>
-                <div className="fbi"><span className="fb-badge fb-yellow">보통</span><div className="fbil">주장 명확성</div><div className="fbiv">{sd.k1}</div></div>
-                <div className="fbi"><span className="fb-badge fb-yellow">보통</span><div className="fbil">이유 적절성</div><div className="fbiv">{sd.k2}</div></div>
-              </div>
-              <div className="fbsec">
-                <div className="fbsh">과정·기능 범주</div>
-                <div className="fbi"><span className="fb-badge fb-blue">준수</span><div className="fbil">상대 고려</div><div className="fbiv">{sd.p1}</div></div>
-                <div className="fbi"><span className="fb-badge fb-red">미흡</span><div className="fbil">대화 조정</div><div className="fbiv">{sd.p2}</div></div>
-              </div>
-              <div className="fbsec">
-                <div className="fbsh">가치·태도 범주</div>
-                <div className="fbi"><span className="fb-badge fb-blue">준수</span><div className="fbil">참여 태도</div><div className="fbiv">{sd.a1}</div></div>
-              </div>
+
+              {fbLoading && (
+                <div style={{textAlign:'center',padding:'20px',color:'var(--g400)',fontSize:'13px'}}>
+                  AI가 대화를 분석하고 있어요...
+                </div>
+              )}
+
+              {!fbLoading && (
+                <>
+                  <div className="fbsec">
+                    <div className="fbsh">지식·이해 범주</div>
+                    <FbItem label="주장 명확성" score={fbScores?.k1} reason={fbScores?.reason_k1} fallback={sd.k1}/>
+                    <FbItem label="이유 적절성" score={fbScores?.k2} reason={fbScores?.reason_k2} fallback={sd.k2}/>
+                  </div>
+                  <div className="fbsec">
+                    <div className="fbsh">과정·기능 범주</div>
+                    <FbItem label="상대 고려" score={fbScores?.p1} reason={fbScores?.reason_p1} fallback={sd.p1}/>
+                    <FbItem label="대화 조정" score={fbScores?.p2} reason={fbScores?.reason_p2} fallback={sd.p2}/>
+                  </div>
+                  <div className="fbsec">
+                    <div className="fbsh">가치·태도 범주</div>
+                    <FbItem label="참여 태도" score={fbScores?.a1} reason={fbScores?.reason_a1} fallback={sd.a1}/>
+                  </div>
+                </>
+              )}
+
               <div className="fbsec">
                 <div className="fbsh">현재 수준</div>
                 <div className="lvl">{[1,2,3,4,5].map(i=><div key={i} className={`ls${i<=stage?' on':''}`}/>)}</div>

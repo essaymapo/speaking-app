@@ -10,12 +10,12 @@ const stageData = {
 };
 
 const voiceIds = {
-  Rachel:'21m00Tcm4TlvDq8ikWAM',
-  Bella:'EXAVITQu4vr4xnSDxMaL',
-  Adam:'pNInz6obpgDQGcFmaJgB',
-  Antoni:'ErXwobaYiN019PkySvjV',
-  Elli:'MF3mGyEYCl7XYWbV9V6O',
-  Josh:'TxGEqnHWrfWFTfGW9XjX'
+  'Hana (여성·밝음)': 'jsCqWAovK2LkecY7zXl4',
+  'Miso (여성·차분)': 'uyVNoMrnUku1dZyVEXwD',
+  'Min-joon (남성·활기)': 'nCnkMoNNpGFjvNwZBPr5',
+  'Jay Kim (남성·따뜻)': 'xtEAhFqPPFNpJvZDVJKm',
+  'Sunhee (할머니·포근)': 'cgSgspJ2msm6clMCkdW9',
+  'Seojin (남성·신뢰)': 'N2lVS1w4EtoT3dr4eOWO'
 };
 
 // 상태: idle | listening | thinking | speaking
@@ -158,7 +158,7 @@ export default function Home() {
         const res = await fetch('/api/tts',{
           method:'POST',
           headers:{'Content-Type':'application/json','x-eleven-key':elevenKey},
-          body:JSON.stringify({text:clean, voiceId:voiceIds[voiceName]})
+          body:JSON.stringify({text:clean, voiceId: voiceName.startsWith('custom:') ? voiceName.replace('custom:','') : (voiceIds[voiceName] || voiceIds['Hana (여성·밝음)'])})
         });
         if (!res.ok) throw new Error('TTS error');
         const blob = await res.blob();
@@ -477,6 +477,9 @@ export default function Home() {
                   <button key={v} className={`abtn${voiceName===v?' sel':''}`} onClick={()=>setVoiceName(v)}>{v}</button>
                 ))}
               </div>
+              <div className="lbl" style={{marginBottom:4}}>커스텀 Voice ID (직접 입력)</div>
+              <div style={{fontSize:11,color:'var(--g400)',marginBottom:6}}>ElevenLabs 보이스 라이브러리에서 원하는 목소리 ID 직접 입력 가능</div>
+              <input className="ainp" placeholder="Voice ID 입력 (예: abc123xyz...)" value={voiceName.startsWith('custom:') ? voiceName.replace('custom:','') : ''} onChange={e=>{ if(e.target.value) setVoiceName('custom:'+e.target.value); }} style={{marginBottom:0}}/>
             </>}
             <button className="btnm" onClick={saveAdmin}>저장</button>
             {adminSaved && <div className="saved-msg">저장됐어요! 다음부터 자동으로 불러와요.</div>}

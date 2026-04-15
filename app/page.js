@@ -40,6 +40,7 @@ export default function Home() {
   const [convState, setConvState] = useState('idle');
   const [showFb, setShowFb] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
   const [paused, setPaused] = useState(false);
   const [interimText, setInterimText] = useState('');
 
@@ -48,6 +49,7 @@ export default function Home() {
   const audioRef = useRef(null);
   const messagesRef = useRef([]);
   const convStateRef = useRef('idle');
+  const showSuccessRef = useRef(false);
   const pausedRef = useRef(false);
   const stageRef = useRef(1);
   const silenceTimerRef = useRef(null);
@@ -87,9 +89,42 @@ export default function Home() {
     const s = stageData[stageRef.current];
     const common = `\n\n[출력 규칙] 절대 금지: 마크다운, 이모티콘, 특수기호. 일반 텍스트만. 2~3문장 이내로 짧게.`;
     const prompts = {
-      '설득하기':`너는 대한민국 남자 초등학생의 설득 대상 "${character}" 역할이다.\n수업: 설득하기 / 학년: ${s.grade} / 단계: ${stageRef.current}단계\n주제: ${topic}\n[말투] ${character} 특유의 자연스러운 말투. 2~3문장 이내. 강의 금지.\n[수락 기준] ${s.cond}\n[규칙] 정답 금지. 대신 정리 금지. 칭찬 일색 금지. 처음부터 동의 금지. 조건 달성 시 수락. 3회 반복 시 "한 번 더 생각해봐"로 마무리. 성공 시 "[선생님께] 설득 성공" 출력.`,
-      '주장하기':`너는 대한민국 남자 초등학생이 주장을 펼치는 대상 "${character}" 역할이다.\n수업: 주장하기 / 학년: ${s.grade} / 단계: ${stageRef.current}단계\n주제: ${topic}\n[말투] ${character} 특유의 전문적 말투. 2~3문장 이내. 어려운 용어 금지.\n[수락 기준] ${s.cond}\n[규칙] 정답 금지. 대신 정리 금지. 칭찬 일색 금지. 처음부터 동의 금지. 조건 달성 시 인정. 3회 반복 시 "더 생각해봐요"로 마무리. 성공 시 "[선생님께] 주장 성공" 출력.`,
-      '설명하기':`너는 대한민국 남자 초등학생이 설명하는 대상 "${character}" 역할이다.\n수업: 설명하기 / 학년: ${s.grade} / 단계: ${stageRef.current}단계\n주제: ${topic}\n[말투] 진짜 모르는 것처럼 순수하게. 아는 척 금지. 1~2문장.\n[이해 기준] ${s.cond}\n[규칙] 아는 척 금지. 어려운 말 나오면 "그게 뭐야?" 되묻기. 3회 반복 시 "다르게 설명해줄 수 있어?"로 유도. 성공 시 "[선생님께] 설명 성공" 출력.`
+      '설득하기':`너는 대한민국 남자 초등학생의 설득 대상 "${character}" 역할이다.
+수업: 설득하기 / 학년: ${s.grade} / 단계: ${stageRef.current}단계 / 주제: ${topic}
+[말투] ${character} 특유의 자연스러운 말투. 2~3문장 이내. 강의 금지.
+[대화 방식 - 핵심] 매번 이유만 묻지 마라. 아래를 상황에 맞게 섞어라:
+- 공감 후 버팀: "그건 나도 이해해. 근데 엄마 입장에선..."
+- 반례 제시: "근데 그렇게 되면 이건 어떻게 할 건데?"
+- 조건 협상: "그 말이 맞다면, 이건 약속할 수 있어?"
+- 흔들리는 척: "음... 거의 다 됐는데 한 가지만 더 말해봐"
+- 감정 반응: "솔직히 그 말은 좀 마음에 걸리긴 하는데..."
+이유 반복 요구 금지. 실제 대화처럼 자연스럽게.
+[수락 기준] ${s.cond}
+[규칙] 정답 금지. 대신 정리 금지. 처음부터 동의 금지. 조건 달성 시 따뜻하게 수락. 3회 반복 시 "한 번 더 생각해봐"로 마무리. 성공 시 수락 말을 먼저 하고 마지막에 [선생님께] 설득 성공 출력.`,
+      '주장하기':`너는 대한민국 남자 초등학생이 주장을 펼치는 대상 "${character}" 역할이다.
+수업: 주장하기 / 학년: ${s.grade} / 단계: ${stageRef.current}단계 / 주제: ${topic}
+[말투] ${character} 특유의 전문적 말투. 2~3문장 이내. 어려운 용어 금지.
+[대화 방식 - 핵심] 매번 근거만 묻지 마라. 아래를 상황에 맞게 섞어라:
+- 다른 관점 제시: "반대로 생각하면 이런 문제도 있지 않나요?"
+- 부분 인정 후 도전: "그 논리는 맞아요. 근데 이 경우엔?"
+- 현실 문제 제기: "실제로 그렇게 하려면 어떤 어려움이 있을까요?"
+- 흔들리는 모습: "음, 그 말이 꽤 설득력 있네요. 근데..."
+- 감정 반응: "오, 그 부분은 나도 생각해본 적 있어요"
+근거만 반복 요구 금지. 실제 토론처럼 자연스럽게.
+[수락 기준] ${s.cond}
+[규칙] 정답 금지. 대신 정리 금지. 처음부터 동의 금지. 조건 달성 시 전문가답게 인정. 3회 반복 시 "더 생각해봐요"로 마무리. 성공 시 인정 말을 먼저 하고 마지막에 [선생님께] 주장 성공 출력.`,
+      '설명하기':`너는 대한민국 남자 초등학생이 설명하는 대상 "${character}" 역할이다.
+수업: 설명하기 / 학년: ${s.grade} / 단계: ${stageRef.current}단계 / 주제: ${topic}
+[말투] 진짜 모르는 것처럼 순수하게. 아는 척 금지. 1~2문장.
+[대화 방식 - 핵심] 항상 "그게 뭐야?"로만 반응하지 마라. 아래를 섞어라:
+- 잘못 이해한 척: "아, 그러니까 ○○란 말이지? 맞아?" (일부러 틀리게)
+- 엉뚱한 연결: "그럼 그게 ○○랑 비슷한 거야?"
+- 감탄하며 궁금해하기: "오 신기하다! 근데 그럼 ○○는 어떻게 돼?"
+- 부분 이해: "앞부분은 알겠는데 뒷부분은 아직 모르겠어"
+- 쉽게 요청: "좀 더 쉽게 말해줄 수 있어?"
+"그게 뭐야?" 반복 금지. 진짜 대화처럼.
+[이해 기준] ${s.cond}
+[규칙] 아는 척 금지. 대신 정리 금지. 처음부터 이해하기 금지. 3회 반복 시 "다르게 설명해줄 수 있어?"로 유도. 성공 시 이해했다는 말을 먼저 하고 마지막에 [선생님께] 설명 성공 출력.`
     };
     return (prompts[lessonType]||'') + common;
   }
@@ -129,8 +164,11 @@ export default function Home() {
 
       if (text.includes('[선생님께] 설득 성공')||text.includes('[선생님께] 주장 성공')||text.includes('[선생님께] 설명 성공')) {
         setShowSuccess(true);
-        setConvState('idle');
+        showSuccessRef.current = true;
+        setCelebrate(true);
+        setTimeout(()=>setCelebrate(false), 3000);
         stopListening();
+        await speakAndThenListen(text);
         return;
       }
 
@@ -164,8 +202,8 @@ export default function Home() {
         const blob = await res.blob();
         const audio = new Audio(URL.createObjectURL(blob));
         audioRef.current = audio;
-        audio.onended = ()=>{ if (!pausedRef.current) { setConvState('listening'); startListening(); } };
-        audio.onerror = ()=>{ if (!pausedRef.current) { setConvState('listening'); startListening(); } };
+        audio.onended = ()=>{ if (showSuccessRef.current||pausedRef.current) { setConvState('idle'); return; } setConvState('listening'); startListening(); };
+        audio.onerror = ()=>{ if (showSuccessRef.current||pausedRef.current) { setConvState('idle'); return; } setConvState('listening'); startListening(); };
         audio.play();
       } catch(e) {
         fallbackSpeak(clean, ()=>{ if (!pausedRef.current) { setConvState('listening'); startListening(); } });
@@ -304,7 +342,8 @@ export default function Home() {
     setScreen(1); setMessages([]); messagesRef.current=[];
     setLessonType(null); setGrade(null); setStage(1); stageRef.current=1;
     setTopic(''); setCharacter(''); setCandidates([]);
-    setShowSuccess(false); setShowFb(false); setPaused(false); pausedRef.current=false;
+    setShowSuccess(false); showSuccessRef.current=false;
+    setCelebrate(false); setShowFb(false); setPaused(false); pausedRef.current=false;
     setConvState('idle'); setInterimText('');
   }
 
@@ -431,6 +470,17 @@ export default function Home() {
         .sucgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
         .sucbtn{padding:10px;border:1.5px solid var(--teal);border-radius:var(--rs);background:white;color:var(--teal-d);font-size:13px;font-weight:700;cursor:pointer;font-family:'Nanum Gothic',sans-serif;text-align:center;}
         .sucbtn.end{grid-column:1/-1;border-color:var(--g200);color:var(--g600);}
+        .celebrate-overlay{position:fixed;inset:0;pointer-events:none;z-index:200;overflow:hidden;}
+        .confetti{position:absolute;width:10px;height:10px;border-radius:2px;animation:fall linear forwards;}
+        @keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}
+        .suc-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border:3px solid var(--teal);border-radius:20px;padding:1.5rem 2rem;text-align:center;z-index:201;animation:popIn .4s ease-out;}
+        @keyframes popIn{0%{transform:translate(-50%,-50%) scale(0.5);opacity:0;}70%{transform:translate(-50%,-50%) scale(1.1);}100%{transform:translate(-50%,-50%) scale(1);opacity:1;}}
+        .suc-banner-icon{font-size:48px;margin-bottom:8px;}
+        .suc-banner-txt{font-size:22px;font-weight:800;color:var(--teal-d);}
+        .fb-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;margin-right:6px;flex-shrink:0;}
+        .fb-red{background:#FCEBEB;color:#A32D2D;border:1px solid #F09595;}
+        .fb-yellow{background:#FAEEDA;color:#854F0B;border:1px solid #FAC775;}
+        .fb-blue{background:#E6F1FB;color:#185FA5;border:1px solid #85B7EB;}
         .fbp{background:white;border:1.5px solid var(--g200);border-radius:var(--r);padding:1.25rem;margin-bottom:10px;}
         .fbh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--g100);}
         .fbht{font-size:15px;font-weight:800;}.fbclose{background:none;border:none;font-size:18px;cursor:pointer;color:var(--g400);}
@@ -615,7 +665,28 @@ export default function Home() {
             {interimText && <div className="bbl interim">{interimText}...</div>}
           </div>
 
-          {showSuccess && (
+      {celebrate && (
+        <>
+          <div className="celebrate-overlay">
+            {Array.from({length:30}).map((_,i)=>(
+              <div key={i} className="confetti" style={{
+                left: Math.random()*100+'%',
+                animationDuration: (1+Math.random()*2)+'s',
+                animationDelay: Math.random()*0.5+'s',
+                background: ['#1D9E75','#378ADD','#D85A30','#BA7517','#993556'][i%5],
+                width: (6+Math.random()*10)+'px',
+                height: (6+Math.random()*10)+'px',
+              }}/>
+            ))}
+          </div>
+          <div className="suc-banner">
+            <div className="suc-banner-icon">🎉</div>
+            <div className="suc-banner-txt">성공!</div>
+          </div>
+        </>
+      )}
+
+      {showSuccess && (
             <div className="sucbox">
               <div className="sucttl">성공! 다음을 선택해주세요.</div>
               <div className="sucgrid">
@@ -639,17 +710,17 @@ export default function Home() {
               </div>
               <div className="fbsec">
                 <div className="fbsh">지식·이해 범주</div>
-                <div className="fbi"><div className="fbil">주장 명확성</div><div className="fbiv">{sd.k1}</div></div>
-                <div className="fbi"><div className="fbil">이유 적절성</div><div className="fbiv">{sd.k2}</div></div>
+                <div className="fbi"><span className="fb-badge fb-yellow">보통</span><div className="fbil">주장 명확성</div><div className="fbiv">{sd.k1}</div></div>
+                <div className="fbi"><span className="fb-badge fb-yellow">보통</span><div className="fbil">이유 적절성</div><div className="fbiv">{sd.k2}</div></div>
               </div>
               <div className="fbsec">
                 <div className="fbsh">과정·기능 범주</div>
-                <div className="fbi"><div className="fbil">상대 고려</div><div className="fbiv">{sd.p1}</div></div>
-                <div className="fbi"><div className="fbil">대화 조정</div><div className="fbiv">{sd.p2}</div></div>
+                <div className="fbi"><span className="fb-badge fb-blue">준수</span><div className="fbil">상대 고려</div><div className="fbiv">{sd.p1}</div></div>
+                <div className="fbi"><span className="fb-badge fb-red">미흡</span><div className="fbil">대화 조정</div><div className="fbiv">{sd.p2}</div></div>
               </div>
               <div className="fbsec">
                 <div className="fbsh">가치·태도 범주</div>
-                <div className="fbi"><div className="fbil">참여 태도</div><div className="fbiv">{sd.a1}</div></div>
+                <div className="fbi"><span className="fb-badge fb-blue">준수</span><div className="fbil">참여 태도</div><div className="fbiv">{sd.a1}</div></div>
               </div>
               <div className="fbsec">
                 <div className="fbsh">현재 수준</div>

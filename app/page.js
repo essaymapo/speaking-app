@@ -199,11 +199,10 @@ export default function Home() {
     const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
     const rec = new SR();
     rec.lang='ko-KR';
-    rec.continuous=true;
+    rec.continuous=false;
     rec.interimResults=true;
 
     let finalTranscript = '';
-    let hasSpoken = false;
 
     rec.onresult = (e) => {
       // AI가 말하는 중이면 즉시 끊기
@@ -213,46 +212,35 @@ export default function Home() {
       }
 
       let interim = '';
-      for (let i=e.resultIndex; i<e.results.length; i++) {
+      for (let i=0; i<e.results.length; i++) {
         if (e.results[i].isFinal) {
-          finalTranscript += e.results[i][0].transcript;
-          hasSpoken = true;
+          finalTranscript = e.results[i][0].transcript;
         } else {
-          interim += e.results[i][0].transcript;
+          interim = e.results[i][0].transcript;
         }
       }
-      setInterimText(interim||finalTranscript);
-
-      // 말이 끝난 후 침묵 감지
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      if (hasSpoken) {
-        silenceTimerRef.current = setTimeout(()=>{
-          if (finalTranscript.trim()) {
-            rec.stop();
-          }
-        }, 1800);
-      }
+      setInterimText(interim || finalTranscript);
     };
 
     rec.onend = ()=>{
       setInterimText('');
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      if (finalTranscript.trim()&&!pausedRef.current) {
+
+      if (finalTranscript.trim() && !pausedRef.current) {
         const userMsg = {role:'user', content:finalTranscript.trim()};
         const newHistory = [...messagesRef.current, userMsg];
         setMessages(newHistory);
         messagesRef.current = newHistory;
         callAI(newHistory);
       } else if (!pausedRef.current && convStateRef.current==='listening') {
-        // 아무 말 없으면 다시 듣기
-        setTimeout(()=>startListening(), 300);
+        setTimeout(()=>startListening(), 200);
       }
     };
 
     rec.onerror = (e)=>{
       setInterimText('');
-      if (e.error!=='no-speech'&&!pausedRef.current&&convStateRef.current==='listening') {
-        setTimeout(()=>startListening(), 500);
+      if (!pausedRef.current && convStateRef.current==='listening') {
+        setTimeout(()=>startListening(), 300);
       }
     };
 

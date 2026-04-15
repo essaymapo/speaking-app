@@ -45,6 +45,7 @@ export default function Home() {
 
   function buildSystemPrompt() {
     const sd = stageData[stage];
+    const common = `\n\n[출력 규칙] 절대 금지: 마크다운(**굵게**, *기울임*, # 제목), 이모티콘(😊🎉 등), 특수기호. 반드시 일반 텍스트로만 답해라.`;
     const prompts = {
       '설득하기': `너는 대한민국 남자 초등학생의 설득 대상 역할이다.
 수업 유형: 설득하기 / 학년: ${sd.grade} / 단계: ${stage}단계
@@ -65,7 +66,7 @@ export default function Home() {
 [이해 기준] ${sd.cond}
 [규칙] 아는 척 금지. 아이 말 대신 정리 금지. 처음부터 이해하기 금지. 어려운 말 나오면 "그게 무슨 뜻이야?" 되묻기. 같은 말 3회 반복 시 "조금 다르게 설명해줄 수 있어?"로 유도. 성공 시 "[선생님께] 설명 성공! ①같은 주제 다음 단계 ②새 주제 같은 단계 ③종료" 출력. "피드백" 입력 시 역할 멈추고 교육과정 기반 피드백 제공 후 복귀.`
     };
-    return prompts[lessonType];
+    return prompts[lessonType] + common;
   }
 
   async function callClaude(history) {
@@ -104,31 +105,15 @@ export default function Home() {
   }
 
   async function speakText(text) {
-    const clean = text.replace(/\[선생님께\][\s\S]*$/gm, '').trim();
+    const clean = text
+      .replace(/\[선생님께\][\s\S]*$/gm, '')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/[🎉✅❌⚠️👍👎😊😄🙂]/g, '')
+      .trim();
     if (!clean) return;
-    if (voiceMode === 'elevenlabs' && elevenKey) {
-      try {
-        if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-        const res = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-eleven-key': elevenKey },
-          body: JSON.stringify({ text: clean, voiceId: voiceIds[voiceName] })
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(JSON.stringify(err));
-        }
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        audioRef.current = new Audio(url);
-        audioRef.current.play();
-      } catch (e) {
-        setMessages(prev => [...prev, { role: 'assistant', content: '음성 오류: ' + e.message, type: 'sys' }]);
-        fallbackSpeak(clean);
-      }
-    } else {
-      fallbackSpeak(clean);
-    }
+    fallbackSpeak(clean);
   }
 
   function fallbackSpeak(text) {
@@ -454,7 +439,7 @@ export default function Home() {
           <div className="carea" ref={chatRef}>
             {messages.map((m, i) => (
               <div key={i} className={`bbl ${m.type==='sys'?'sys':m.role==='user'?'user':'ai'}`}>
-                {m.content}
+                {m.role === 'assistant' ? m.content.replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/#{1,6}\s/g,'') : m.content}
               </div>
             ))}
             {loading && (

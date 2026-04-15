@@ -370,6 +370,8 @@ ${conv}
     setShowFb(next);
     if (next) analyzeFeedback();
   }
+
+  function togglePause() {
     if (!paused) {
       setPaused(true);
       pausedRef.current = true;

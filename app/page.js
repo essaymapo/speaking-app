@@ -806,7 +806,7 @@ ${conv}
           <div className="voice-status">
             <span className="vs-icon">{si.icon}</span>
             <span className="vs-label" style={{color:si.color}}>{si.label}</span>
-            <div className="vs-dot" style={{background:si.color}} className={`vs-dot${convState!=='idle'?' active':''}`}/>
+            <div className={`vs-dot${convState!=='idle'?' active':''}`} style={{background:si.color}}/>
           </div>
 
           {/* 텍스트 보조 입력 */}

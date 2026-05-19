@@ -44,7 +44,7 @@ export default function Home() {
   const [claudeKey, setClaudeKey] = useState('');
   const [claudeMode, setClaudeMode] = useState('claude');
   const [elevenKey, setElevenKey] = useState('');
-  const [voiceName, setVoiceName] = useState('Rachel');
+  const [voiceName, setVoiceName] = useState('Hana (여성·밝음)');
   const [voiceMode, setVoiceMode] = useState('elevenlabs');
   const [adminSaved, setAdminSaved] = useState(false);
   const [messages, setMessages] = useState([]);
